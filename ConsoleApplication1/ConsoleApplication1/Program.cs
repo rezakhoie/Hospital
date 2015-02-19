@@ -38,7 +38,6 @@ namespace ConsoleApplication1
                 while (!parser.EndOfData)
                 {
                     string[] fields = parser.ReadFields();
-                    //...
                     DateTime.TryParseExact(fields[0], pattern, null, DateTimeStyles.None, out arr);
                     if (DateTime.Compare(queS, arr)==-1 && DateTime.Compare(queE, arr)==1)
                     {
