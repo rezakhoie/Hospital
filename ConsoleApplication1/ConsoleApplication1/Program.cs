@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualBasic.FileIO;
 using System.Globalization;
+using System.Data;
 
 namespace ConsoleApplication1
 {
@@ -12,8 +13,14 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-            using (TextFieldParser parser = new TextFieldParser(@"C:\Users\Reza\Desktop\Flow Optimization Project_BUMC data.csv"))
+            using (TextFieldParser parser = new TextFieldParser("Flow Optimization Project_BUMC data.csv"))
             {
+                var result = MySqlDB.Query("select * FROM raw", "raw");
+                for (int i = 0; i < result.Rows.Count; i++)
+                {
+                    var row = result.Rows[i];
+                    Console.WriteLine(row[3]);
+                }
                 parser.TextFieldType = FieldType.Delimited;
                 parser.SetDelimiters(",");
                 Console.WriteLine("Enter start date and time: (yyyy-MM-dd HH:mm:ss)");
@@ -37,7 +44,9 @@ namespace ConsoleApplication1
                 DateTime.TryParseExact(queryEnd, pattern, null, DateTimeStyles.None, out queE);                
                 while (!parser.EndOfData)
                 {
+                   
                     string[] fields = parser.ReadFields();
+                    //////Counter
                     DateTime.TryParseExact(fields[0], pattern, null, DateTimeStyles.None, out arr);
                     if (DateTime.Compare(queS, arr)==-1 && DateTime.Compare(queE, arr)==1)
                     {
@@ -63,6 +72,10 @@ namespace ConsoleApplication1
                     {
                        depCounter++;
                     }
+                    ///////Waiting time calculator
+                  
+
+
                 }
                 Console.WriteLine("Arr: "+ arrCounter);
                 Console.WriteLine("Registeration: " + registerationCounter);
