@@ -33,9 +33,12 @@ namespace ConsoleApplication1
                     depCounter = int.Parse(MySqlDB.ScalarQuery("select count(id) from raw WHERE Dep >= '" + begin + "' AND Dep < '" + end + "'").ToString());
                     if (arrCounter + registerationCounter + triageCounter + dispoCounter + depCounter == 0)
                         break;
-                    MySqlDB.NonQuery("insert into counts (`Interval`, `Arr`, `Registeration`, `Triage`, `Dispo`, `Dep`) values ('" + startDateTime.GetDateTimeFormats()[93] + "', '" + arrCounter + "', '" + registerationCounter + "', '" + triageCounter + "', '" + dispoCounter + "', '" + depCounter + "')");
+                    MySqlDB.NonQuery("insert into counts (`Interval`, `Arr`, `Registeration`, `Triage`, `Dispo`, `Dep`, `" + startDateTime.DayOfWeek.ToString() + "`, `Month" + startDateTime.Month.ToString() + "`, `Day" + startDateTime.Day.ToString() + "`, `Hour" + startDateTime.Hour.ToString() + "`) values ('" + startDateTime.GetDateTimeFormats()[93] + "', '" + arrCounter + "', '" + registerationCounter + "', '" + triageCounter + "', '" + dispoCounter + "', '" + depCounter + "', '1', '1', '1', '1')");
                     startDateTime=startDateTime.AddHours(1);
                 }
+
+
+
 
                 //var result = MySqlDB.Query("select * FROM raw", "raw");
                 //for (int i = 0; i < result.Rows.Count; i++)
