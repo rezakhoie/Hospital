@@ -5,14 +5,14 @@ using System.Text;
 using System.Data;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
-using System.Data;
+
 
 namespace ConsoleApplication1
 {
     public class MySqlDB
     {
         private static string settings = "server=127.0.0.1; user id=root; password=`123456; database=Hospital; pooling=false; Convert Zero Datetime=True";
-
+        
 
         public static void NonQuery(string sql)
         {
