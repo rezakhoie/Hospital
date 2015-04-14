@@ -21,7 +21,7 @@ namespace ConsoleApplication1
                 MySqlCommand command = new MySqlCommand(sql, myConnection);
                 command.CommandTimeout = 0;
                 myConnection.Open();
-                command.ExecuteNonQuery();
+                command.ExecuteNonQuery(); 
             }
         }
 

@@ -15,8 +15,8 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-           //dataCleaner();
-           neuralNetworkTrainer();
+            //dataCleaner();
+            neuralNetworkTrainer();
             //nnSample();
         }
 
@@ -28,39 +28,39 @@ namespace ConsoleApplication1
                 new double[] {1, 0}, new double[] {1, 1}
             };
 
-                        double[][] output = 
+            double[][] output = 
             {
                 new double[] {0}, new double[] {1},
                 new double[] {1}, new double[] {0}
             };
 
-                        // create neural network
+            // create neural network
             ActivationNetwork network = new ActivationNetwork(new SigmoidFunction(2),
                             2, // two inputs in the network
                             2, // two neurons in the first layer
                             1); // one neuron in the second layer
 
-                        // create teacher
+            // create teacher
             LevenbergMarquardtLearning teacher = new LevenbergMarquardtLearning(network);
 
-                        // loop
-            double error=4;
-            while (error>.01)
+            // loop
+            double error = 4;
+            while (error > .01)
             {
                 // run epoch of learning procedure
                 error = teacher.RunEpoch(input, output);
-               
+
                 // check error value to see if we need to stop
                 // ...
             }
-            Console.Write(network.Compute(new double[] {1, 1}).ToArray()[0] + " * ");
+            Console.Write(network.Compute(new double[] { 1, 1 }).ToArray()[0] + " * ");
             Console.ReadLine();
-             
+
         }
 
         static void neuralNetworkTrainer()
         {
-            double testPercent=0.15;
+            double testPercent = 0.15;
 
             DataTable data = new DataTable();
             data = MySqlDB.Query("SELECT * FROM input", "input");
@@ -70,58 +70,68 @@ namespace ConsoleApplication1
             double[][] output = new double[data.Rows.Count - testSampleNo][];
             double[][] testOutput = new double[testSampleNo][];
 
-            for(int i=0; i<data.Rows.Count-testSampleNo; i++)
+            for (int i = 0; i < data.Rows.Count - testSampleNo; i++)
                 input[i] = (data.Rows[i].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
-            for(int i=data.Rows.Count-testSampleNo; i<data.Rows.Count; i++)
+            for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
                 testInput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
 
             int noOfNetworkInputs = data.Columns.Count;
 
             data = MySqlDB.Query("SELECT * FROM outputArr", "outputArr");
-            for (int i = 0; i < data.Rows.Count-testSampleNo; i++)
-                output[i] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString()))/40)).ToArray());
-            for(int i=data.Rows.Count-testSampleNo; i<data.Rows.Count; i++)
-                testOutput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / 40)).ToArray());
+            int outputMax= int.Parse(MySqlDB.ScalarQuery("SELECT MAX(arr) FROM modified").ToString());
+            for (int i = 0; i < data.Rows.Count - testSampleNo; i++)
+                output[i] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
+            for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
+                testOutput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
             for (int hiddenNeuronsNo = 5; hiddenNeuronsNo <= 60; hiddenNeuronsNo++)
             {
-                for (int errorThreshold = 5; errorThreshold <= 20; errorThreshold++)
+                ActivationNetwork network = new ActivationNetwork((IActivationFunction)new SigmoidFunction(.1), noOfNetworkInputs, hiddenNeuronsNo, 1);
+                LevenbergMarquardtLearning teacher = new LevenbergMarquardtLearning(network);
+                teacher.LearningRate = .5;
+                double error = 100;
+                int epochCounter = 0;
+                Boolean convergance = true;
+                double lastCalculatedError=9999999;
+                double lastCalculatedErrorCopy= 9999999;
+                double errorDifference = 1;
+                double sumSquaredError = 0;
+     
+                while (errorDifference>0)
                 {
-
-                    ActivationNetwork network = new ActivationNetwork((IActivationFunction)new SigmoidFunction(.1), noOfNetworkInputs, hiddenNeuronsNo, 1);
-                    LevenbergMarquardtLearning teacher = new LevenbergMarquardtLearning(network);
-                    teacher.LearningRate = .5;
-                    double error = 100;
-                    int epochCounter = 0;
-                    Boolean convergance = true;
-                    while (error > errorThreshold)
+                    lastCalculatedErrorCopy = sumSquaredError;
+                    if (epochCounter == 100)
                     {
-                        // run epoch of learning procedure
-                        error = teacher.RunEpoch(input, output);
-                        epochCounter++;
-                        //Console.WriteLine(error);
-                        // check error value to see if we need to stop
-                        // ...
-                        if (epochCounter == 100)
-                        {
-                            convergance = false;
-                            break;
-                        }
+                        convergance = false;
+                        break;
                     }
-                    if (!convergance)
-                        Console.WriteLine("" + hiddenNeuronsNo + "\t" + errorThreshold + "\t" + epochCounter + "\tNC");
-                    else
+                    error = teacher.RunEpoch(input, output);
+                    epochCounter++;
+                    sumSquaredError = 0;
+                    for (int i = 0; i < testSampleNo; i++)
                     {
-                        double sumSquaredError = 0;
-                        for (int i = 0; i < testSampleNo; i++)
-                            sumSquaredError += Math.Pow(((network.Compute(testInput[i]).ToArray())[0] * 40) - (testOutput[i][0] * 40), 2);
-                        Console.WriteLine("" + hiddenNeuronsNo + "\t" + errorThreshold + "\t" + epochCounter + "\t" + Math.Sqrt(sumSquaredError / testSampleNo));
-                    }
+                        sumSquaredError += Math.Pow(((network.Compute(testInput[i]).ToArray())[0] * outputMax) - (testOutput[i][0] * outputMax), 2);
+                        //Console.WriteLine((network.Compute(testInput[i]).ToArray())[0] * outputMax+" - "+testOutput[i][0]*outputMax);
+                    }                    
+                    errorDifference = lastCalculatedError - sumSquaredError;
+                    lastCalculatedError = sumSquaredError;
                 }
+
+                epochCounter--;
+                if (!convergance)
+                    Console.WriteLine("" + hiddenNeuronsNo + "\t"  + epochCounter + "\tNC");
+                else
+                {
+                    Console.WriteLine("" + hiddenNeuronsNo + "\t" + epochCounter + "\t" + Math.Sqrt(lastCalculatedErrorCopy/testSampleNo));
+                }
+               
             }
             Console.ReadLine();
         }
 
-        static void dataCleaner(){       
+        static void dataCleaner()
+        {
+            int intervalHoursCount = 3;
+            int intervalDaysCount = 2;
             int arrCounter;
             int registerationCounter;
             int triageCounter;
@@ -134,7 +144,7 @@ namespace ConsoleApplication1
             while (true)
             {
                 String begin = startDateTime.GetDateTimeFormats()[93];
-                String end = (startDateTime + new TimeSpan(1, 0, 0)).GetDateTimeFormats()[93];
+                String end = (startDateTime + new TimeSpan(intervalHoursCount, 0, 0)).GetDateTimeFormats()[93];
                 arrCounter = int.Parse(MySqlDB.ScalarQuery("select count(id) from raw WHERE Arr >= '" + begin.Replace(" ", ":") + "' AND Arr < '" + end.Replace(" ", ":") + "'").ToString());
                 registerationCounter = int.Parse(MySqlDB.ScalarQuery("select count(id) from raw WHERE Registeration >= '" + begin + "' AND Registeration < '" + end + "'").ToString());
                 triageCounter = int.Parse(MySqlDB.ScalarQuery("select count(id) from raw WHERE Triage >= '" + begin + "' AND Triage < '" + end + "'").ToString());
@@ -148,18 +158,20 @@ namespace ConsoleApplication1
                     isHolidayNum = 1;
                 if (isHoliday(startDateTime.AddDays(1)))
                     isBeforeHolidayNum = 1;
-                MySqlDB.NonQuery("insert into modified (`Interval`, `Arr`, `Registeration`, `Triage`, `Dispo`, `Dep`, `" + startDateTime.DayOfWeek.ToString() + "`, `Month" + startDateTime.Month.ToString() + "`, `Day" + startDateTime.Day.ToString() + "`, `Hour" + startDateTime.Hour.ToString() + "`, `isHoliday`, `isBeforeHoliday`) values ('" + startDateTime.GetDateTimeFormats()[93] + "', '" + arrCounter + "', '" + registerationCounter + "', '" + triageCounter + "', '" + dispoCounter + "', '" + depCounter + "', '1', '1', '1', '1', '" + isHolidayNum + "', '" + isBeforeHolidayNum + "')");
-                MySqlDB.NonQuery("insert into input (`" + startDateTime.DayOfWeek.ToString() + "`, `Month" + startDateTime.Month.ToString() + "`, `Day" + startDateTime.Day.ToString() + "`, `Hour" + startDateTime.Hour.ToString() + "`, `isHoliday`, `isBeforeHoliday`) values ('1', '1', '1', '1', '" + isHolidayNum + "', '" + isBeforeHolidayNum + "')");
+                MySqlDB.NonQuery("insert into modified (`Interval`, `Arr`, `Registeration`, `Triage`, `Dispo`, `Dep`, `" + startDateTime.DayOfWeek.ToString() + "`, `Month" + startDateTime.Month.ToString() + "`, `Day" + Math.Abs(startDateTime.Day / intervalDaysCount + 1).ToString() + "`, `Hour" + Math.Abs(startDateTime.Hour / intervalHoursCount).ToString() + "`, `isHoliday`, `isBeforeHoliday`) values ('" + startDateTime.GetDateTimeFormats()[93] + "', '" + arrCounter + "', '" + registerationCounter + "', '" + triageCounter + "', '" + dispoCounter + "', '" + depCounter + "', 1, 1, 1, 1, " + isHolidayNum + ", " + isBeforeHolidayNum + ")");
+                MySqlDB.NonQuery("insert into input (`" + startDateTime.DayOfWeek.ToString() + "`, `Month" + startDateTime.Month.ToString() + "`, `Day" + Math.Abs(startDateTime.Day / intervalDaysCount + 1).ToString() + "`, `Hour" + Math.Abs(startDateTime.Hour / intervalHoursCount).ToString() + "`, `isHoliday`, `isBeforeHoliday`) values (1, 1, 1, 1, " + isHolidayNum + ", " + isBeforeHolidayNum + ")");
                 MySqlDB.NonQuery("insert into output (`Arr`, `Registeration`, `Triage`, `Dispo`, `Dep`) values ('" + arrCounter + "', '" + registerationCounter + "', '" + triageCounter + "', '" + dispoCounter + "', '" + depCounter + "')");
-                startDateTime = startDateTime.AddHours(1);
-            }         
+                startDateTime = startDateTime.AddHours(intervalHoursCount);
+            }
         }
 
-        static bool isHoliday(DateTime Date){
+        static bool isHoliday(DateTime Date)
+        {
             if (Date.DayOfWeek == System.DayOfWeek.Saturday || Date.DayOfWeek == System.DayOfWeek.Sunday)
                 return true;
-            int iDay=Date.Day;
-            switch (Date.Month){
+            int iDay = Date.Day;
+            switch (Date.Month)
+            {
                 case 1:
                     if (iDay == 1 || iDay == 2)//New year
                         return true;
@@ -202,7 +214,7 @@ namespace ConsoleApplication1
                         return true;
                     break;
                 case 10:
-                     if (Date.DayOfWeek == System.DayOfWeek.Monday && iDay > 7 && iDay < 15)//Columbus day
+                    if (Date.DayOfWeek == System.DayOfWeek.Monday && iDay > 7 && iDay < 15)//Columbus day
                         return true;
                     break;
                 case 11:
