@@ -83,45 +83,48 @@ namespace ConsoleApplication1
                 output[i] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
             for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
                 testOutput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
-            for (int hiddenNeuronsNo = 5; hiddenNeuronsNo <= 60; hiddenNeuronsNo++)
+            for (int firstLayerHiddenNeuronsNo = 5; firstLayerHiddenNeuronsNo <= 60; firstLayerHiddenNeuronsNo++)
             {
-                ActivationNetwork network = new ActivationNetwork((IActivationFunction)new SigmoidFunction(.1), noOfNetworkInputs, hiddenNeuronsNo, 1);
-                LevenbergMarquardtLearning teacher = new LevenbergMarquardtLearning(network);
-                teacher.LearningRate = .5;
-                double error = 100;
-                int epochCounter = 0;
-                Boolean convergance = true;
-                double lastCalculatedError=9999999;
-                double lastCalculatedErrorCopy= 9999999;
-                double errorDifference = 1;
-                double sumSquaredError = 0;
+                for (int secondLayerHiddenNeuronsNo = 5; secondLayerHiddenNeuronsNo <= 60; secondLayerHiddenNeuronsNo++)
+                {    
+                    ActivationNetwork network = new ActivationNetwork((IActivationFunction)new SigmoidFunction(.1), noOfNetworkInputs, firstLayerHiddenNeuronsNo, secondLayerHiddenNeuronsNo, 1);
+                    LevenbergMarquardtLearning teacher = new LevenbergMarquardtLearning(network);
+                    teacher.LearningRate = .5;
+                    double error;
+                    int epochCounter = 0;
+                    Boolean convergance = true;
+                    double lastCalculatedError=9999999;
+                    double lastCalculatedErrorCopy= 9999999;
+                    double errorDifference = 1;
+                    double sumSquaredError = 0;
      
-                while (errorDifference>0)
-                {
-                    lastCalculatedErrorCopy = sumSquaredError;
-                    if (epochCounter == 100)
+                    while (errorDifference>0)
                     {
-                        convergance = false;
-                        break;
+                        lastCalculatedErrorCopy = sumSquaredError;
+                        if (epochCounter == 100)
+                        {
+                            convergance = false;
+                            break;
+                        }
+                        error = teacher.RunEpoch(input, output);
+                        epochCounter++;
+                        sumSquaredError = 0;
+                        for (int i = 0; i < testSampleNo; i++)
+                        {
+                            sumSquaredError += Math.Pow(((network.Compute(testInput[i]).ToArray())[0] * outputMax) - (testOutput[i][0] * outputMax), 2);
+                            //Console.WriteLine((network.Compute(testInput[i]).ToArray())[0] * outputMax+" - "+testOutput[i][0]*outputMax);
+                        }                    
+                        errorDifference = lastCalculatedError - sumSquaredError;
+                        lastCalculatedError = sumSquaredError;
                     }
-                    error = teacher.RunEpoch(input, output);
-                    epochCounter++;
-                    sumSquaredError = 0;
-                    for (int i = 0; i < testSampleNo; i++)
-                    {
-                        sumSquaredError += Math.Pow(((network.Compute(testInput[i]).ToArray())[0] * outputMax) - (testOutput[i][0] * outputMax), 2);
-                        //Console.WriteLine((network.Compute(testInput[i]).ToArray())[0] * outputMax+" - "+testOutput[i][0]*outputMax);
-                    }                    
-                    errorDifference = lastCalculatedError - sumSquaredError;
-                    lastCalculatedError = sumSquaredError;
-                }
 
-                epochCounter--;
-                if (!convergance)
-                    Console.WriteLine("" + hiddenNeuronsNo + "\t"  + epochCounter + "\tNC");
-                else
-                {
-                    Console.WriteLine("" + hiddenNeuronsNo + "\t" + epochCounter + "\t" + Math.Sqrt(lastCalculatedErrorCopy/testSampleNo));
+                    epochCounter--;
+                    if (!convergance)
+                        Console.WriteLine("" + firstLayerHiddenNeuronsNo + "\t" + secondLayerHiddenNeuronsNo + "\t"+ epochCounter + "\tNC");
+                    else
+                    {
+                        Console.WriteLine("" + firstLayerHiddenNeuronsNo + "\t" + secondLayerHiddenNeuronsNo + "\t" + epochCounter + "\t" + Math.Sqrt(lastCalculatedErrorCopy / testSampleNo));
+                    }
                 }
                
             }
