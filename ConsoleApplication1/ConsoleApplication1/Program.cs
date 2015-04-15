@@ -70,19 +70,36 @@ namespace ConsoleApplication1
             double[][] output = new double[data.Rows.Count - testSampleNo][];
             double[][] testOutput = new double[testSampleNo][];
 
-            for (int i = 0; i < data.Rows.Count - testSampleNo; i++)
-                input[i] = (data.Rows[i].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
-            for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
-                testInput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
+            
+            ///////////////////////////////////////////////////Generates a shuffled array
+            int[] random = new int[data.Rows.Count];
+            for (int i = 0; i < random.Length;i++ )
+            {
+                random[i] = i;
+            }
+            Random r = new Random();
+            for (int i = random.Length; i > 0 ; i-- )
+            {
+                int x = r.Next(i);
+                int t = random[x];
+                random[x] = random[i-1];
+                random[i-1] = t;
+            }
+            ///////////////////////////////////////////////////
 
+            for (int i = 0; i < data.Rows.Count - testSampleNo; i++)
+                    input[i] = (data.Rows[random[i]].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
+            for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
+                testInput[i - data.Rows.Count + testSampleNo] = (data.Rows[random[i]].ItemArray.Select(x => double.Parse(x.ToString())).ToArray());
+            
             int noOfNetworkInputs = data.Columns.Count;
 
             data = MySqlDB.Query("SELECT * FROM outputArr", "outputArr");
             int outputMax= int.Parse(MySqlDB.ScalarQuery("SELECT MAX(arr) FROM modified").ToString());
             for (int i = 0; i < data.Rows.Count - testSampleNo; i++)
-                output[i] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
+                output[i] = (data.Rows[random[i]].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
             for (int i = data.Rows.Count - testSampleNo; i < data.Rows.Count; i++)
-                testOutput[i - data.Rows.Count + testSampleNo] = (data.Rows[i].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
+                testOutput[i - data.Rows.Count + testSampleNo] = (data.Rows[random[i]].ItemArray.Select(x => ((double.Parse(x.ToString())) / outputMax)).ToArray());
             for (int firstLayerHiddenNeuronsNo = 5; firstLayerHiddenNeuronsNo <= 60; firstLayerHiddenNeuronsNo++)
             {
                 for (int secondLayerHiddenNeuronsNo = 5; secondLayerHiddenNeuronsNo <= 60; secondLayerHiddenNeuronsNo++)
